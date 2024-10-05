@@ -1,7 +1,6 @@
 import re
 import time
 import random
-import argparse
 import logging
 from pathlib import Path
 
@@ -11,9 +10,6 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-
-# For automatic driver management
-from webdriver_manager.chrome import ChromeDriverManager
 
 def random_delay(min_delay=1, max_delay=3):
     """Sleep for a random amount of time between min_delay and max_delay seconds."""
@@ -36,13 +32,16 @@ def scrape_content(driver, url, selectors):
         content_texts = []
         for selector in selectors:
             try:
-                element = WebDriverWait(driver, 60).until(
-                    EC.presence_of_element_located((By.CSS_SELECTOR, selector))
-                )
-                content_text = element.text.strip()
-                content_texts.append(content_text)
-            except Exception:
-                logging.warning(f"Selector '{selector}' not found on page {url}")
+                elements = driver.find_elements(By.CSS_SELECTOR, selector)
+                if not elements:
+                    logging.warning(f"Selector '{selector}' not found on page {url}")
+                    continue
+                for element in elements:
+                    content_text = element.text.strip()
+                    if content_text:
+                        content_texts.append(content_text)
+            except Exception as e:
+                logging.warning(f"Error using selector '{selector}' on page {url}: {e}")
         return content_texts
     except Exception as e:
         logging.error(f"An error occurred while scraping {url}: {e}")
@@ -55,7 +54,7 @@ def generate_urls(base_url, patterns):
         placeholders = re.findall(r'\{(\w+)\}', pattern)
         if placeholders:
             if 'num' in placeholders:
-                for i in range(1, 100):  # Adjust range as needed
+                for i in range(1, 101):  # Adjust range as needed
                     url = base_url + pattern.format(num=i)
                     urls.append(url)
             else:
@@ -82,30 +81,20 @@ def main():
     # Configure logging
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-    # Parse command-line arguments
-    parser = argparse.ArgumentParser(description="Web scraping script to extract data from a website.")
-    parser.add_argument('--base-url', type=str, required=True, help='The base URL to scrape.')
-    parser.add_argument('--output-file', type=str, required=True, help='Output file path.')
-    parser.add_argument('--patterns', type=str, nargs='+', help='List of URL patterns with optional placeholders.')
-    parser.add_argument('--selectors', type=str, nargs='+', required=True, help='List of CSS selectors to locate content.')
-    parser.add_argument('--chrome-driver-path', type=str, help='Path to chromedriver executable.')
-    parser.add_argument('--headless', action='store_true', help='Run browser in headless mode.')
-    parser.add_argument('--urls', type=str, nargs='+', help='List of full URLs to scrape.')
+    # Base URL of the website you want to scrape
+    base_url = "https://example.com/"
 
-    args = parser.parse_args()
+    # Output file path where the scraped content will be saved
+    output_file = "output.txt"
 
-    base_url = args.base_url
-    output_file = args.output_file
-    patterns = args.patterns
-    selectors = args.selectors
-    chrome_driver_path = args.chrome_driver_path
-    headless = args.headless
-    urls = args.urls
+    # List of CSS selectors to locate the content you want to extract
+    selectors = [".content", ".article"]
 
-    # Validate arguments
-    if not urls and not patterns:
-        logging.error("You must provide either a list of URLs or patterns to generate URLs.")
-        exit(1)
+    # URL patterns to generate the pages you want to scrape
+    patterns = ["page/{num}"]
+
+    # Path to your chromedriver executable
+    chromedriver_path = "/path/to/chromedriver"  # Update this path
 
     # Prepare output path
     output_path = Path(output_file)
@@ -114,27 +103,19 @@ def main():
     # Setup Chrome options
     options = Options()
     options.add_argument("--incognito")
-    if headless:
-        options.add_argument("--headless")
+    # Uncomment the next line to run in headless mode
+    # options.add_argument("--headless")
     options.add_argument("--disable-blink-features=AutomationControlled")
 
     # Initialize WebDriver with options
-    if chrome_driver_path:
-        service = Service(chrome_driver_path)
-    else:
-        # Use webdriver-manager to handle driver
-        service = Service(ChromeDriverManager().install())
-
+    service = Service(chromedriver_path)
     driver = webdriver.Chrome(service=service, options=options)
 
     try:
-        # Generate URLs if patterns are provided
-        if patterns:
-            url_list = generate_urls(base_url, patterns)
-        else:
-            url_list = urls
+        # Generate URLs
+        urls = generate_urls(base_url, patterns)
 
-        scrape_and_save_content(driver, url_list, selectors, output_path)
+        scrape_and_save_content(driver, urls, selectors, output_path)
         logging.info(f"Scraping completed. Content saved to {output_file}.")
 
     finally:
