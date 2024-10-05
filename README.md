@@ -8,27 +8,6 @@ This is a web scraping tool designed to collect data from any website. It uses S
 - Selenium
 - webdriver-manager
 - Google Chrome browser
-
-## Installation
-
-1. **Clone the repository:**
-
-   ```bash
-   git clone https://github.com/yourusername/your-repo-name.git
-   cd your-repo-name
-   ```
-
-2. **Install the required Python packages:**
-
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-   **Note:** The `requirements.txt` file should contain:
-
-   ```
-   selenium
-   webdriver-manager
    ```
 
 ## Usage
@@ -82,12 +61,6 @@ This will scrape the content from the specified URLs.
 
 - The script introduces random delays between page loads to mimic human behavior and avoid being blocked by websites.
 - Ensure you have permission to scrape the target website, adhering to its `robots.txt` file and terms of service.
-
-## License
-
-This project is licensed under the MIT License.
-
----
 
 **Instructions:**
 
